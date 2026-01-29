@@ -1,0 +1,49 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.coverprofile
+
+# Go modules
+go.sum
+
+# Vendor directory
+/vendor/
+
+# IDE/editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Built Docker images (optional)
+docker-images/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Generated Swagger/OpenAPI docs
+docs/
+
+# Optional: compiled frontend assets (if you have a frontend)
+public/
+dist/
+build/
