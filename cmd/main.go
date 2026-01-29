@@ -3,6 +3,8 @@ package main
 import (
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Weit145/Auth_golang/internal/config"
 	"github.com/Weit145/Auth_golang/internal/grpc/gateway"
@@ -18,16 +20,19 @@ func main() {
 	log.Info("Start AUTH")
 
 	//Init grpc
-	srv, err := gateway.New()
+	grpcServer, err := gateway.New(log)
 	if err != nil {
-		log.Error("cannot create server: %v", logger.Err(err))
+		log.Error("cannot create server", logger.Err(err))
+		os.Exit(1)
 	}
 
-	go func() {
-		if err := srv.Start(); err != nil {
-			log.Error("server failed: %v", logger.Err(err))
-		}
-	}()
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop
+
+	log.Info("Shutting down gRPC server...")
+	grpcServer.GracefulStop()
+
 }
 
 func setupLogger(env string) *slog.Logger {
