@@ -9,6 +9,8 @@ import (
 	"github.com/Weit145/Auth_golang/internal/config"
 	"github.com/Weit145/Auth_golang/internal/grpc/gateway"
 	"github.com/Weit145/Auth_golang/internal/lib/logger"
+	"github.com/Weit145/Auth_golang/internal/service"
+	// Import the registration service
 )
 
 func main() {
@@ -19,8 +21,11 @@ func main() {
 	log := setupLogger(cfg.Env)
 	log.Info("Start AUTH")
 
+	// Init registration service
+	Service := service.New(log)
+
 	//Init grpc
-	grpcServer, err := gateway.New(log)
+	grpcServer, err := gateway.New(log, Service, cfg.GRPC.Address) // Pass the service
 	if err != nil {
 		log.Error("cannot create server", logger.Err(err))
 		os.Exit(1)
