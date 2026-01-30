@@ -85,6 +85,33 @@ func (s *server) RefreshToken(ctx context.Context, req *GRPCauth.CookieRequest) 
 	return &resp, nil
 }
 
+func (s *server) Authenticate(ctx context.Context, req *GRPCauth.UserLoginRequest) (*GRPCauth.CookieResponse, error) {
+	login := req.GetLogin()
+	password := req.GetPassword()
+	if login == "" {
+		return nil, status.Error(codes.InvalidArgument, "Login is required")
+	}
+	if password == "" {
+		return nil, status.Error(codes.InvalidArgument, "Password is required")
+	}
+	RefreshToken, err := s.service.Authenticate(ctx, login, password)
+	if err != nil {
+		return nil, err
+	}
+	resp := GRPCauth.CookieResponse{
+		AccessToken: "123123",
+		Cookie: &GRPCauth.Cookie{
+			Key:      "refresh_token",
+			Value:    RefreshToken,
+			Httponly: true,
+			Secure:   true,
+			Samesite: "lax",
+			MaxAge:   24,
+		},
+	}
+	return &resp, nil
+}
+
 func New(log *slog.Logger, serv *service.Service, addr string) (*grpc.Server, error) {
 
 	lis, err := net.Listen("tcp", addr)
