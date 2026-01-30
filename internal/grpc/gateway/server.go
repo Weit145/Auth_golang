@@ -112,6 +112,25 @@ func (s *server) Authenticate(ctx context.Context, req *GRPCauth.UserLoginReques
 	return &resp, nil
 }
 
+func (s *server) CurrentUser(ctx context.Context, req *GRPCauth.UserCurrentRequest) (*GRPCauth.CurrentUserResponse, error) {
+	AssetToken := req.GetAccessToken()
+	if AssetToken == "" {
+		return nil, status.Error(codes.InvalidArgument, "AssetToken is required")
+	}
+	user, err := s.service.Current(ctx, AssetToken)
+	if err != nil {
+		return nil, err
+	}
+	resp := GRPCauth.CurrentUserResponse{
+		Id:         int32(user.Id),
+		Login:      user.Login,
+		IsActive:   user.IsActive,
+		IsVerified: user.IsVerified,
+		Role:       user.Role,
+	}
+	return &resp, nil
+}
+
 func New(log *slog.Logger, serv *service.Service, addr string) (*grpc.Server, error) {
 
 	lis, err := net.Listen("tcp", addr)

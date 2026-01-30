@@ -6,6 +6,6 @@ import (
 )
 
 func (s *Service) Authenticate(ctx context.Context, login, password string) (string, error) {
-	s.log.Info("Refresh method called", slog.String("RefreshToken: ", login))
+	s.log.Info("Refresh method called", slog.String("Login: ", login))
 	return "123123", nil
 }
