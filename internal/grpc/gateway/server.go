@@ -47,6 +47,29 @@ func (s *server) CreateUser(ctx context.Context, req *GRPCauth.UserCreateRequest
 	return &ok, nil
 }
 
+func (s *server) RegistrationUser(ctx context.Context, req *GRPCauth.TokenRequest) (*GRPCauth.CookieResponse, error) {
+	token := req.GetTokenPod()
+	if token == "" {
+		return nil, status.Error(codes.InvalidArgument, "token is required")
+	}
+	RefreshToken, err := s.service.Confirm(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	resp := GRPCauth.CookieResponse{
+		AccessToken: "123123",
+		Cookie: &GRPCauth.Cookie{
+			Key:      "refresh_token",
+			Value:    RefreshToken,
+			Httponly: true,
+			Secure:   true,
+			Samesite: "lax",
+			MaxAge:   24,
+		},
+	}
+	return &resp, nil
+}
+
 func New(log *slog.Logger, serv *service.Service, addr string) (*grpc.Server, error) {
 
 	lis, err := net.Listen("tcp", addr)
