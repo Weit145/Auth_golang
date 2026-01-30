@@ -70,6 +70,21 @@ func (s *server) RegistrationUser(ctx context.Context, req *GRPCauth.TokenReques
 	return &resp, nil
 }
 
+func (s *server) RefreshToken(ctx context.Context, req *GRPCauth.CookieRequest) (*GRPCauth.AccessTokenResponse, error) {
+	RefreshToken := req.GetRefreshToken()
+	if RefreshToken == "" {
+		return nil, status.Error(codes.InvalidArgument, "RefreshToken is required")
+	}
+	AssetToken, err := s.service.Refresh(ctx, RefreshToken)
+	if err != nil {
+		return nil, err
+	}
+	resp := GRPCauth.AccessTokenResponse{
+		AccessToken: AssetToken,
+	}
+	return &resp, nil
+}
+
 func New(log *slog.Logger, serv *service.Service, addr string) (*grpc.Server, error) {
 
 	lis, err := net.Listen("tcp", addr)
