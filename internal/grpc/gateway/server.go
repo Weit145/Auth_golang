@@ -20,6 +20,27 @@ type server struct {
 	log     *slog.Logger
 }
 
+func New(log *slog.Logger, serv *service.Service, addr string) (*grpc.Server, error) {
+
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	s := grpc.NewServer()
+
+	GRPCauth.RegisterAuthServer(s, &server{service: serv, log: log})
+
+	go func() {
+		log.Info("gRPC server started", slog.String("addr", addr))
+		if err := s.Serve(lis); err != nil {
+			log.Error("gRPC server failed", logger.Err(err))
+			os.Exit(1)
+		}
+	}()
+	return s, nil
+}
+
 func (s *server) CreateUser(ctx context.Context, req *GRPCauth.UserCreateRequest) (*GRPCauth.Okey, error) {
 	login := req.GetLogin()
 	email := req.GetEmail()
@@ -94,7 +115,7 @@ func (s *server) Authenticate(ctx context.Context, req *GRPCauth.UserLoginReques
 	if password == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password is required")
 	}
-	RefreshToken, err := s.service.Authenticate(ctx, login, password)
+	RefreshToken, err := s.service.LoginUser(ctx, login, password)
 	if err != nil {
 		return nil, err
 	}
@@ -131,23 +152,17 @@ func (s *server) CurrentUser(ctx context.Context, req *GRPCauth.UserCurrentReque
 	return &resp, nil
 }
 
-func New(log *slog.Logger, serv *service.Service, addr string) (*grpc.Server, error) {
+func (s *server) LogOutUser(ctx context.Context, req *GRPCauth.TokenRequest) (*GRPCauth.Empty, error) {
+	AssetToken := req.GetTokenPod()
+	if AssetToken == "" {
+		return nil, status.Error(codes.InvalidArgument, "AssetToken is required")
+	}
 
-	lis, err := net.Listen("tcp", addr)
+	err := s.service.LogOutUser(ctx, AssetToken)
 	if err != nil {
 		return nil, err
 	}
 
-	s := grpc.NewServer()
-
-	GRPCauth.RegisterAuthServer(s, &server{service: serv, log: log})
-
-	go func() {
-		log.Info("gRPC server started", slog.String("addr", addr))
-		if err := s.Serve(lis); err != nil {
-			log.Error("gRPC server failed", logger.Err(err))
-			os.Exit(1)
-		}
-	}()
-	return s, nil
+	resp := GRPCauth.Empty{}
+	return &resp, nil
 }
