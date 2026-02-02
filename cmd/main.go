@@ -10,6 +10,7 @@ import (
 	"github.com/Weit145/Auth_golang/internal/grpc/gateway"
 	"github.com/Weit145/Auth_golang/internal/lib/logger"
 	"github.com/Weit145/Auth_golang/internal/service"
+	"github.com/Weit145/Auth_golang/internal/storage/postgresql"
 	// Import the registration service
 )
 
@@ -21,8 +22,16 @@ func main() {
 	log := setupLogger(cfg.Env)
 	log.Info("Start AUTH")
 
+	//Init storage
+	db, err := postgresql.New(log)
+	if err != nil {
+		log.Error("No connect storage", logger.Err(err))
+		os.Exit(1)
+	}
+	log.Info("Connect db")
+
 	// Init registration service
-	Service := service.New(log)
+	Service := service.New(log, db)
 
 	//Init grpc
 	grpcServer, err := gateway.New(log, Service, cfg.GRPC.Address) // Pass the service

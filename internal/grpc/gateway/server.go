@@ -9,6 +9,7 @@ import (
 	"github.com/Weit145/Auth_golang/internal/lib/logger"
 	"github.com/Weit145/Auth_golang/internal/service"
 	GRPCauth "github.com/Weit145/proto-repo/auth"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -60,7 +61,12 @@ func (s *server) CreateUser(ctx context.Context, req *GRPCauth.UserCreateRequest
 		return nil, status.Error(codes.InvalidArgument, "username is required")
 	}
 
-	err := s.service.CreateUser(ctx, login, email, password, username)
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to hash password")
+	}
+
+	err = s.service.CreateUser(ctx, login, email, string(passwordHash))
 	if err != nil {
 		return nil, err
 	}
