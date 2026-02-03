@@ -61,7 +61,7 @@ func (s *Service) Confirm(ctx context.Context, token string) (string, string, er
 	h.Write([]byte(refreshToken))
 	user.RefreshTokenHash = hex.EncodeToString(h.Sum(nil))
 
-	if err = s.storage.ConfirmRepo(ctx, tx, user); err != nil { // Pass tx
+	if err = s.storage.ConfirmRepo(ctx, tx, user); err != nil {
 		return "", "", fmt.Errorf("%s: failed to update user within transaction: %w", op, err)
 	}
 
@@ -69,5 +69,5 @@ func (s *Service) Confirm(ctx context.Context, token string) (string, string, er
 		return "", "", fmt.Errorf("%s: failed to commit transaction: %w", op, err)
 	}
 
-	return AssetToken, refreshToken, nil // Adjusted return
+	return AssetToken, refreshToken, nil
 }
