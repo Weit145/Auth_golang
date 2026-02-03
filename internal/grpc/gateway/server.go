@@ -9,7 +9,6 @@ import (
 	"github.com/Weit145/Auth_golang/internal/lib/logger"
 	"github.com/Weit145/Auth_golang/internal/service"
 	GRPCauth "github.com/Weit145/proto-repo/auth"
-	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -46,7 +45,6 @@ func (s *server) CreateUser(ctx context.Context, req *GRPCauth.UserCreateRequest
 	login := req.GetLogin()
 	email := req.GetEmail()
 	password := req.GetPassword()
-	username := req.GetUsername()
 
 	if login == "" {
 		return nil, status.Error(codes.InvalidArgument, "login is required")
@@ -57,21 +55,13 @@ func (s *server) CreateUser(ctx context.Context, req *GRPCauth.UserCreateRequest
 	if password == "" {
 		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
-	if username == "" {
-		return nil, status.Error(codes.InvalidArgument, "username is required")
-	}
 
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to hash password")
-	}
-
-	err = s.service.CreateUser(ctx, login, email, string(passwordHash))
+	err := s.service.CreateUser(ctx, login, email, password)
 	if err != nil {
 		return nil, err
 	}
-	ok := GRPCauth.Okey{Success: true}
-	return &ok, nil
+	resp := GRPCauth.Okey{Success: true}
+	return &resp, nil
 }
 
 func (s *server) RegistrationUser(ctx context.Context, req *GRPCauth.TokenRequest) (*GRPCauth.CookieResponse, error) {
@@ -79,12 +69,12 @@ func (s *server) RegistrationUser(ctx context.Context, req *GRPCauth.TokenReques
 	if token == "" {
 		return nil, status.Error(codes.InvalidArgument, "token is required")
 	}
-	RefreshToken, err := s.service.Confirm(ctx, token)
+	AssetToken, RefreshToken, err := s.service.Confirm(ctx, token)
 	if err != nil {
 		return nil, err
 	}
 	resp := GRPCauth.CookieResponse{
-		AccessToken: "123123",
+		AccessToken: AssetToken,
 		Cookie: &GRPCauth.Cookie{
 			Key:      "refresh_token",
 			Value:    RefreshToken,

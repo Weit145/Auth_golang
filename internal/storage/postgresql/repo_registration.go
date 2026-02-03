@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	UniqueViolation = "23505" // PostgreSQL error code for unique_violation
+	UniqueViolation = "23505"
 )
 
 func (s *Storage) RegistrationRepo(ctx context.Context, login, email, passwordHash string) error {
@@ -26,14 +26,17 @@ func (s *Storage) RegistrationRepo(ctx context.Context, login, email, passwordHa
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == UniqueViolation {
 			if pgErr.ConstraintName == "auth_login_key" {
 
-				return fmt.Errorf("%s: login already exists: %w", op, err)
+				return fmt.Errorf("%s: login already exists", op)
 			}
 			if pgErr.ConstraintName == "auth_email_key" {
-				return fmt.Errorf("%s: email already exists: %w", op, err)
+				return fmt.Errorf("%s: email already exists", op)
 			}
 		}
-		return fmt.Errorf("%s: failed to insert user: %w", op, err)
+		return fmt.Errorf("%s: failed to insert user", op)
 	}
 
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("%s: commit", op)
+	}
+	return nil
 }

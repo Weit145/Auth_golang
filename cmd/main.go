@@ -31,7 +31,7 @@ func main() {
 	log.Info("Connect db")
 
 	// Init registration service
-	Service := service.New(log, db)
+	Service := service.New(log, db, cfg)
 
 	//Init grpc
 	grpcServer, err := gateway.New(log, Service, cfg.GRPC.Address) // Pass the service
