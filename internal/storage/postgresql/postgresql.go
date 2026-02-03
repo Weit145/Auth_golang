@@ -8,6 +8,7 @@ import (
 
 	"github.com/Weit145/Auth_golang/internal/lib/logger"
 	"github.com/jackc/pgx/v5"
+	"github.com/Weit145/Auth_golang/internal/domain"
 )
 
 type Storage struct {
@@ -76,4 +77,28 @@ func migrate(ctx context.Context, log *slog.Logger, db *pgx.Conn) error {
 	}
 
 	return nil
+}
+
+// BeginTx implements storage.Storage.
+func (s *Storage) BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error) {
+	const op = "storage.postgresql.BeginTx"
+	tx, err := s.db.BeginTx(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	return tx, nil
+}
+
+// GetUserByEmailTx implements storage.Storage.
+// This will be implemented fully in repo_get_user.go
+func (s *Storage) GetUserByEmailTx(ctx context.Context, tx pgx.Tx, email string) (*domain.User, error) {
+	// Placeholder implementation for now
+	return nil, fmt.Errorf("not implemented")
+}
+
+// ConfirmRepoTx implements storage.Storage.
+// This will be implemented fully in repo_confirm.go
+func (s *Storage) ConfirmRepoTx(ctx context.Context, tx pgx.Tx, user *domain.User) error {
+	// Placeholder implementation for now
+	return fmt.Errorf("not implemented")
 }

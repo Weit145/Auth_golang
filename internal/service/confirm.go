@@ -9,6 +9,7 @@ import (
 
 	myjwt "github.com/Weit145/Auth_golang/internal/lib/jwt"
 	"github.com/Weit145/Auth_golang/internal/lib/logger"
+	"github.com/jackc/pgx/v5"
 )
 
 func (s *Service) Confirm(ctx context.Context, token string) (string, string, error) {
@@ -21,19 +22,35 @@ func (s *Service) Confirm(ctx context.Context, token string) (string, string, er
 		return "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	user, err := s.storage.GetUserByEmail(ctx, email)
+	tx, err := s.storage.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		s.log.Error("failed to get user by email", logger.Err(err))
-		return "", "", fmt.Errorf("%s: %w", op, err)
+		return "", "", fmt.Errorf("%s: failed to begin transaction: %w", op, err)
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback(ctx)
+			panic(r)
+		} else if err != nil {
+			tx.Rollback(ctx)
+		}
+	}()
+
+	user, err := s.storage.GetUserByEmail(ctx, tx, email)
+	if err != nil {
+		return "", "", fmt.Errorf("%s: failed to get user by email within transaction: %w", op, err)
+	}
+	if user == nil {
+		return "", "", fmt.Errorf("%s: user not found after read", op)
 	}
 
 	user.IsVerified = true
 
 	refreshToken, err := myjwt.CreateLoginJWT(s.cfg, s.log, user.Login)
 	if err != nil {
-		s.log.Error("failed to create login JWT", logger.Err(err))
-		return "", "", fmt.Errorf("%s: %w", op, err)
+		return "", "", fmt.Errorf("%s: failed to create login JWT: %w", op, err)
 	}
+
 	AssetToken, err := myjwt.CreateLoginJWT(s.cfg, s.log, user.Login)
 	if err != nil {
 		s.log.Error("failed to create login JWT", logger.Err(err))
@@ -44,10 +61,13 @@ func (s *Service) Confirm(ctx context.Context, token string) (string, string, er
 	h.Write([]byte(refreshToken))
 	user.RefreshTokenHash = hex.EncodeToString(h.Sum(nil))
 
-	if err := s.storage.ConfirmRepo(ctx, user); err != nil {
-		s.log.Error("failed to update user", logger.Err(err))
-		return "", "", fmt.Errorf("%s: %w", op, err)
+	if err = s.storage.ConfirmRepo(ctx, tx, user); err != nil { // Pass tx
+		return "", "", fmt.Errorf("%s: failed to update user within transaction: %w", op, err)
 	}
 
-	return AssetToken, refreshToken, nil
+	if err = tx.Commit(ctx); err != nil {
+		return "", "", fmt.Errorf("%s: failed to commit transaction: %w", op, err)
+	}
+
+	return AssetToken, refreshToken, nil // Adjusted return
 }

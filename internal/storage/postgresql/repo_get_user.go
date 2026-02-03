@@ -8,12 +8,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (s *Storage) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
+func (s *Storage) GetUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*domain.User, error) {
 	const op = "storage.postgresql.GetUserByEmail"
 
 	stmt := `SELECT id, login, email, password_hash, is_active, is_verified, role, refresh_token_hash FROM auth WHERE email = $1`
 	var user domain.User
-	err := s.db.QueryRow(ctx, stmt, email).Scan(
+	err := tx.QueryRow(ctx, stmt, email).Scan(
 		&user.Id,
 		&user.Login,
 		&user.Email,
