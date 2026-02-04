@@ -111,12 +111,12 @@ func (s *server) Authenticate(ctx context.Context, req *GRPCauth.UserLoginReques
 	if password == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password is required")
 	}
-	RefreshToken, err := s.service.LoginUser(ctx, login, password)
+	AccessToken, RefreshToken, err := s.service.LoginUser(ctx, login, password)
 	if err != nil {
 		return nil, err
 	}
 	resp := GRPCauth.CookieResponse{
-		AccessToken: "123123",
+		AccessToken: AccessToken,
 		Cookie: &GRPCauth.Cookie{
 			Key:      "refresh_token",
 			Value:    RefreshToken,

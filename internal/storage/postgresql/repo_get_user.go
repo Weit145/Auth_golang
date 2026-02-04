@@ -32,3 +32,28 @@ func (s *Storage) GetUserByEmail(ctx context.Context, tx pgx.Tx, email string) (
 
 	return &user, nil
 }
+
+func (s *Storage) GetUserByLogin(ctx context.Context, tx pgx.Tx, login string) (*domain.User, error) {
+	const op = "storage.postgresql.GetUserByLogin"
+
+	stmt := `SELECT id, login, email, password_hash, is_active, is_verified, role, refresh_token_hash FROM auth WHERE login = $1`
+	var user domain.User
+	err := tx.QueryRow(ctx, stmt, login).Scan(
+		&user.Id,
+		&user.Login,
+		&user.Email,
+		&user.PasswordHash,
+		&user.IsActive,
+		&user.IsVerified,
+		&user.Role,
+		&user.RefreshTokenHash,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("%s: user not found", op)
+		}
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return &user, nil
+}

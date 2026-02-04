@@ -14,7 +14,6 @@ import (
 
 func (s *Service) Confirm(ctx context.Context, token string) (string, string, error) {
 	const op = "service.Confirm"
-	s.log.Info("Confirm method called", slog.String("token: ", token))
 
 	email, err := myjwt.GetEmail(token, s.cfg.JWT.Secret)
 	if err != nil {
@@ -39,9 +38,6 @@ func (s *Service) Confirm(ctx context.Context, token string) (string, string, er
 	user, err := s.storage.GetUserByEmail(ctx, tx, email)
 	if err != nil {
 		return "", "", fmt.Errorf("%s: failed to get user by email within transaction: %w", op, err)
-	}
-	if user == nil {
-		return "", "", fmt.Errorf("%s: user not found after read", op)
 	}
 
 	user.IsVerified = true
@@ -69,5 +65,6 @@ func (s *Service) Confirm(ctx context.Context, token string) (string, string, er
 		return "", "", fmt.Errorf("%s: failed to commit transaction: %w", op, err)
 	}
 
+	s.log.Info("Confirm method called", slog.String("token: ", token))
 	return AssetToken, refreshToken, nil
 }
