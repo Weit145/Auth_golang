@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/joho/godotenv"
+
 )
 
 type Config struct {
@@ -31,10 +31,10 @@ type TokenTTL struct {
 }
 
 func MustLoad() *Config {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatalf("cannot read .env file: %s", err)
-	}
+	// Conditional loading of .env file or alternative configuration setup
+	// Based on project documentation, configuration is handled via YAML and CONFIG_PATH.
+	// Removing .env loading to prevent "no such file or directory" errors in containerized environments.
+
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
 		// log.Fatal("CONFIG_PATH is not set")

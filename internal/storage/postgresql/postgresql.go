@@ -21,7 +21,7 @@ const (
 
 func New(log *slog.Logger) (*Storage, error) {
 	const op = "storage.postgresql.new"
-	urlStorage := "postgres://postgres:postgres@localhost:5432/auth_service"
+	urlStorage := "postgres://postgres:postgres@postgres:5432/auth_service"
 
 	var conn *pgx.Conn
 	var err error
