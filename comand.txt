@@ -1,0 +1,2 @@
+go mod vendor
+go run cmd/main.go -mod=vendor

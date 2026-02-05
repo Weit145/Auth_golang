@@ -60,4 +60,4 @@ The `internal/lib/response` package provides a standardized structure for API re
 
 ### gRPC Implementation
 
-The gRPC services are defined in the `internal/grpc` directory. The actual service logic should be implemented in the `server` struct in `internal/grpc/gateway/server.go`, which currently uses `GRPCauth.UnimplementedAuthServer`.
+The gRPC services are defined in the `internal/grpc` directory. The actual service logic should be implemented in the `server` struct in `internal/grpc/gateway/server.go`, which currently uses `pb.UnimplementedAuthServer`.

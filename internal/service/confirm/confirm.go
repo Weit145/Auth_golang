@@ -1,4 +1,4 @@
-package service
+package confirm
 
 import (
 	"context"
@@ -7,21 +7,35 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/Weit145/Auth_golang/internal/config"
+	"github.com/Weit145/Auth_golang/internal/domain"
 	myjwt "github.com/Weit145/Auth_golang/internal/lib/jwt"
 	"github.com/Weit145/Auth_golang/internal/lib/logger"
 	"github.com/jackc/pgx/v5"
 )
 
-func (s *Service) Confirm(ctx context.Context, token string) (string, string, error) {
+type Confirm struct {
+	Storage ConfirmRepo
+	Cfg     *config.Config
+	Log     *slog.Logger
+}
+
+type ConfirmRepo interface {
+	BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error)
+	GetUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*domain.User, error)
+	ConfirmRepo(ctx context.Context, tx pgx.Tx, user *domain.User) error
+}
+
+func (s *Confirm) Confirm(ctx context.Context, token string) (string, string, error) {
 	const op = "service.Confirm"
 
-	email, err := myjwt.GetEmail(token, s.cfg.JWT.Secret)
+	email, err := myjwt.GetEmail(token, s.Cfg.JWT.Secret)
 	if err != nil {
-		s.log.Error("failed to get email from token", slog.String("token", token), logger.Err(err))
+		s.Log.Error("failed to get email from token", slog.String("token", token), logger.Err(err))
 		return "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	tx, err := s.storage.BeginTx(ctx, pgx.TxOptions{})
+	tx, err := s.Storage.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return "", "", fmt.Errorf("%s: failed to begin transaction: %w", op, err)
 	}
@@ -35,21 +49,21 @@ func (s *Service) Confirm(ctx context.Context, token string) (string, string, er
 		}
 	}()
 
-	user, err := s.storage.GetUserByEmail(ctx, tx, email)
+	user, err := s.Storage.GetUserByEmail(ctx, tx, email)
 	if err != nil {
 		return "", "", fmt.Errorf("%s: failed to get user by email within transaction: %w", op, err)
 	}
 
 	user.IsVerified = true
 
-	refreshToken, err := myjwt.CreateLoginJWT(s.cfg, s.log, user.Login)
+	refreshToken, err := myjwt.CreateLoginJWT(s.Cfg, s.Log, user.Login)
 	if err != nil {
 		return "", "", fmt.Errorf("%s: failed to create login JWT: %w", op, err)
 	}
 
-	AssetToken, err := myjwt.CreateLoginJWT(s.cfg, s.log, user.Login)
+	AssetToken, err := myjwt.CreateLoginJWT(s.Cfg, s.Log, user.Login)
 	if err != nil {
-		s.log.Error("failed to create login JWT", logger.Err(err))
+		s.Log.Error("failed to create login JWT", logger.Err(err))
 		return "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -57,7 +71,7 @@ func (s *Service) Confirm(ctx context.Context, token string) (string, string, er
 	h.Write([]byte(refreshToken))
 	user.RefreshTokenHash = hex.EncodeToString(h.Sum(nil))
 
-	if err = s.storage.ConfirmRepo(ctx, tx, user); err != nil {
+	if err = s.Storage.ConfirmRepo(ctx, tx, user); err != nil {
 		return "", "", fmt.Errorf("%s: failed to update user within transaction: %w", op, err)
 	}
 
@@ -65,6 +79,6 @@ func (s *Service) Confirm(ctx context.Context, token string) (string, string, er
 		return "", "", fmt.Errorf("%s: failed to commit transaction: %w", op, err)
 	}
 
-	s.log.Info("Confirm method called", slog.String("token: ", token))
+	s.Log.Info("Confirm method called", slog.String("token: ", token))
 	return AssetToken, refreshToken, nil
 }

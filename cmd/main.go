@@ -2,6 +2,7 @@ package main
 
 import (
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -34,7 +35,13 @@ func main() {
 	Service := service.New(log, db, cfg)
 
 	//Init grpc
-	grpcServer, err := gateway.New(log, Service, cfg.GRPC.Address) // Pass the service
+	lis, err := net.Listen("tcp", cfg.GRPC.Address)
+	if err != nil {
+		log.Error("failed to listen", logger.Err(err))
+		os.Exit(1)
+	}
+
+	grpcServer, err := gateway.New(log, Service, lis) // Pass the service and listener
 	if err != nil {
 		log.Error("cannot create server", logger.Err(err))
 		os.Exit(1)

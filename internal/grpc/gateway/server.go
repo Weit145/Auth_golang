@@ -8,40 +8,35 @@ import (
 
 	"github.com/Weit145/Auth_golang/internal/lib/logger"
 	"github.com/Weit145/Auth_golang/internal/service"
-	GRPCauth "github.com/Weit145/proto-repo/auth"
+	pb "github.com/Weit145/proto-repo/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-type server struct {
-	GRPCauth.UnimplementedAuthServer
-	service *service.Service
-	log     *slog.Logger
+type Server struct {
+	pb.UnimplementedAuthServer
+	Service service.ServiceAuth
+	Log     *slog.Logger
 }
 
-func New(log *slog.Logger, serv *service.Service, addr string) (*grpc.Server, error) {
-
-	lis, err := net.Listen("tcp", addr)
-	if err != nil {
-		return nil, err
-	}
+func New(Log *slog.Logger, serv service.ServiceAuth, lis net.Listener) (*grpc.Server, error) {
 
 	s := grpc.NewServer()
 
-	GRPCauth.RegisterAuthServer(s, &server{service: serv, log: log})
+	pb.RegisterAuthServer(s, &Server{Service: serv, Log: Log})
 
 	go func() {
-		log.Info("gRPC server started", slog.String("addr", addr))
+		Log.Info("gRPC server started", slog.String("addr", lis.Addr().String()))
 		if err := s.Serve(lis); err != nil {
-			log.Error("gRPC server failed", logger.Err(err))
+			Log.Error("gRPC server failed", logger.Err(err))
 			os.Exit(1)
 		}
 	}()
 	return s, nil
 }
 
-func (s *server) CreateUser(ctx context.Context, req *GRPCauth.UserCreateRequest) (*GRPCauth.Okey, error) {
+func (s *Server) CreateUser(ctx context.Context, req *pb.UserCreateRequest) (*pb.Okey, error) {
 	login := req.GetLogin()
 	email := req.GetEmail()
 	password := req.GetPassword()
@@ -56,26 +51,27 @@ func (s *server) CreateUser(ctx context.Context, req *GRPCauth.UserCreateRequest
 		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
 
-	err := s.service.CreateUser(ctx, login, email, password)
+	s.Log.Info("Calling Service.CreateUser", slog.String("login", login), slog.String("email", email))
+	err := s.Service.CreateUser(ctx, login, email, password)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, "failed to create user")
 	}
-	resp := GRPCauth.Okey{Success: true}
+	resp := pb.Okey{Success: true}
 	return &resp, nil
 }
 
-func (s *server) RegistrationUser(ctx context.Context, req *GRPCauth.TokenRequest) (*GRPCauth.CookieResponse, error) {
+func (s *Server) RegistrationUser(ctx context.Context, req *pb.TokenRequest) (*pb.CookieResponse, error) {
 	token := req.GetTokenPod()
 	if token == "" {
 		return nil, status.Error(codes.InvalidArgument, "token is required")
 	}
-	AssetToken, RefreshToken, err := s.service.Confirm(ctx, token)
+	AssetToken, RefreshToken, err := s.Service.Confirm(ctx, token)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, "failed to confirm user")
 	}
-	resp := GRPCauth.CookieResponse{
+	resp := pb.CookieResponse{
 		AccessToken: AssetToken,
-		Cookie: &GRPCauth.Cookie{
+		Cookie: &pb.Cookie{
 			Key:      "refresh_token",
 			Value:    RefreshToken,
 			Httponly: true,
@@ -87,22 +83,22 @@ func (s *server) RegistrationUser(ctx context.Context, req *GRPCauth.TokenReques
 	return &resp, nil
 }
 
-func (s *server) RefreshToken(ctx context.Context, req *GRPCauth.CookieRequest) (*GRPCauth.AccessTokenResponse, error) {
+func (s *Server) RefreshToken(ctx context.Context, req *pb.CookieRequest) (*pb.AccessTokenResponse, error) {
 	RefreshToken := req.GetRefreshToken()
 	if RefreshToken == "" {
 		return nil, status.Error(codes.InvalidArgument, "RefreshToken is required")
 	}
-	AssetToken, err := s.service.Refresh(ctx, RefreshToken)
+	AssetToken, err := s.Service.Refresh(ctx, RefreshToken)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, "failed to refresh token")
 	}
-	resp := GRPCauth.AccessTokenResponse{
+	resp := pb.AccessTokenResponse{
 		AccessToken: AssetToken,
 	}
 	return &resp, nil
 }
 
-func (s *server) Authenticate(ctx context.Context, req *GRPCauth.UserLoginRequest) (*GRPCauth.CookieResponse, error) {
+func (s *Server) Authenticate(ctx context.Context, req *pb.UserLoginRequest) (*pb.CookieResponse, error) {
 	login := req.GetLogin()
 	password := req.GetPassword()
 	if login == "" {
@@ -111,13 +107,13 @@ func (s *server) Authenticate(ctx context.Context, req *GRPCauth.UserLoginReques
 	if password == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password is required")
 	}
-	AccessToken, RefreshToken, err := s.service.LoginUser(ctx, login, password)
+	AccessToken, RefreshToken, err := s.Service.LoginUser(ctx, login, password)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, "failed to authenticate user")
 	}
-	resp := GRPCauth.CookieResponse{
+	resp := pb.CookieResponse{
 		AccessToken: AccessToken,
-		Cookie: &GRPCauth.Cookie{
+		Cookie: &pb.Cookie{
 			Key:      "refresh_token",
 			Value:    RefreshToken,
 			Httponly: true,
@@ -129,16 +125,16 @@ func (s *server) Authenticate(ctx context.Context, req *GRPCauth.UserLoginReques
 	return &resp, nil
 }
 
-func (s *server) CurrentUser(ctx context.Context, req *GRPCauth.UserCurrentRequest) (*GRPCauth.CurrentUserResponse, error) {
+func (s *Server) CurrentUser(ctx context.Context, req *pb.UserCurrentRequest) (*pb.CurrentUserResponse, error) {
 	AssetToken := req.GetAccessToken()
 	if AssetToken == "" {
 		return nil, status.Error(codes.InvalidArgument, "AssetToken is required")
 	}
-	user, err := s.service.Current(ctx, AssetToken)
+	user, err := s.Service.Current(ctx, AssetToken)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, "failed to get current user")
 	}
-	resp := GRPCauth.CurrentUserResponse{
+	resp := pb.CurrentUserResponse{
 		Id:         int32(user.Id),
 		Login:      user.Login,
 		IsActive:   user.IsActive,
@@ -148,17 +144,17 @@ func (s *server) CurrentUser(ctx context.Context, req *GRPCauth.UserCurrentReque
 	return &resp, nil
 }
 
-func (s *server) LogOutUser(ctx context.Context, req *GRPCauth.TokenRequest) (*GRPCauth.Empty, error) {
+func (s *Server) LogOutUser(ctx context.Context, req *pb.TokenRequest) (*pb.Empty, error) {
 	AssetToken := req.GetTokenPod()
 	if AssetToken == "" {
 		return nil, status.Error(codes.InvalidArgument, "AssetToken is required")
 	}
 
-	err := s.service.LogOutUser(ctx, AssetToken)
+	err := s.Service.LogOutUser(ctx, AssetToken)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, "failed to Log out user")
 	}
 
-	resp := GRPCauth.Empty{}
+	resp := pb.Empty{}
 	return &resp, nil
 }
