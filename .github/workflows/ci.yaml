@@ -1,0 +1,43 @@
+name: CI AUTH
+
+on:
+  push:
+    branches: [ "master"]
+  pull_request:
+    branches: [ "master"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25.5'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod tidy
+
+      - name: Build project
+        run: go build ./...
+
+      - name: Run unit tests for order handlers
+        run: |
+          go test ./internal/grpc/gateway -v
+
+      # - name: Run integration tests
+      #   run: go test ./tests -v
