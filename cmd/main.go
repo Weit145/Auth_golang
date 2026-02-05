@@ -12,7 +12,6 @@ import (
 	"github.com/Weit145/Auth_golang/internal/lib/logger"
 	"github.com/Weit145/Auth_golang/internal/service"
 	"github.com/Weit145/Auth_golang/internal/storage/postgresql"
-	// Import the registration service
 )
 
 func main() {
@@ -41,7 +40,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	grpcServer, err := gateway.New(log, Service, lis) // Pass the service and listener
+	grpcServer, err := gateway.New(log, Service, lis)
 	if err != nil {
 		log.Error("cannot create server", logger.Err(err))
 		os.Exit(1)
