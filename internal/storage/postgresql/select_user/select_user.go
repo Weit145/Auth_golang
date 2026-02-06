@@ -1,19 +1,20 @@
-package postgresql
+package select_user
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/Weit145/Auth_golang/internal/domain"
+	"github.com/Weit145/Auth_golang/internal/storage"
 	"github.com/jackc/pgx/v5"
 )
 
-func (s *Storage) GetUserByEmail(ctx context.Context, tx pgx.Tx, email string) (*domain.User, error) {
-	const op = "storage.postgresql.GetUserByEmail"
+func GetUserByEmailOp(ctx context.Context, runner storage.QueryRunner, email string) (*domain.User, error) {
+	const op = "storage.postgresql.select_user.GetUserByEmailOp"
 
 	stmt := `SELECT id, login, email, password_hash, is_active, is_verified, role, refresh_token_hash FROM auth WHERE email = $1`
 	var user domain.User
-	err := tx.QueryRow(ctx, stmt, email).Scan(
+	err := runner.QueryRow(ctx, stmt, email).Scan(
 		&user.Id,
 		&user.Login,
 		&user.Email,
@@ -33,12 +34,12 @@ func (s *Storage) GetUserByEmail(ctx context.Context, tx pgx.Tx, email string) (
 	return &user, nil
 }
 
-func (s *Storage) GetUserByLogin(ctx context.Context, tx pgx.Tx, login string) (*domain.User, error) {
-	const op = "storage.postgresql.GetUserByLogin"
+func GetUserByLoginOp(ctx context.Context, runner storage.QueryRunner, login string) (*domain.User, error) {
+	const op = "storage.postgresql.select_user.GetUserByLoginOp"
 
 	stmt := `SELECT id, login, email, password_hash, is_active, is_verified, role, refresh_token_hash FROM auth WHERE login = $1`
 	var user domain.User
-	err := tx.QueryRow(ctx, stmt, login).Scan(
+	err := runner.QueryRow(ctx, stmt, login).Scan(
 		&user.Id,
 		&user.Login,
 		&user.Email,

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
-
 )
 
 type Config struct {
@@ -17,7 +16,7 @@ type Config struct {
 }
 
 type Grpc struct {
-	Address string `yaml::"address" env-default:"auth-service:50051"`
+	Address string `yaml:"address" env-default:"auth-service:50051"`
 }
 
 type JWT struct {
