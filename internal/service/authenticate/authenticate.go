@@ -11,26 +11,25 @@ import (
 	"github.com/Weit145/Auth_golang/internal/domain"
 	myjwt "github.com/Weit145/Auth_golang/internal/lib/jwt"
 	"github.com/Weit145/Auth_golang/internal/lib/logger"
-	"github.com/Weit145/Auth_golang/internal/storage"
 	"github.com/jackc/pgx/v5"
 )
 
 type Login struct {
-	Storage    AuthRepo
-	TxProvider storage.TxProvider
-	Cfg        *config.Config
-	Log        *slog.Logger
+	Storage AuthRepo
+	Cfg     *config.Config
+	Log     *slog.Logger
 }
 
 type AuthRepo interface {
 	GetUserByLogin(ctx context.Context, login string) (*domain.User, error)
 	AuthenticateRepo(ctx context.Context, user *domain.User) error
+	WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error
 }
 
 func (s Login) LoginUser(ctx context.Context, login, password string) (accessToken, refreshToken string, err error) {
 	const op = "service.LoginUser"
 
-	err = s.TxProvider.WithTx(ctx, func(tx pgx.Tx) error {
+	err = s.Storage.WithTx(ctx, func(tx pgx.Tx) error {
 		user, err := s.Storage.GetUserByLogin(ctx, login)
 		if err != nil {
 			return fmt.Errorf("%s: failed to get user by login within transaction: %w", op, err)

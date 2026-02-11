@@ -21,8 +21,5 @@ type Storage interface {
 	GetUserByLogin(ctx context.Context, login string) (*domain.User, error)
 	ConfirmRepo(ctx context.Context, user *domain.User) error
 	UpdateRefreshToken(ctx context.Context, user *domain.User) error
-}
-
-type TxProvider interface {
 	WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error
 }

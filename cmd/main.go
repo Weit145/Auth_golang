@@ -28,6 +28,7 @@ func main() {
 		log.Error("No connect storage", logger.Err(err))
 		os.Exit(1)
 	}
+
 	log.Info("Connect db")
 
 	// Init registration service

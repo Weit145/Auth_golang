@@ -15,12 +15,12 @@ import (
 )
 
 type Service struct {
-	Auth         authenticate.Login
-	ConfirmUser  confirm.Confirm
-	CurrentUser  current.Current
-	LogOut       logout.LogOut
-	RefreshUser  refresh.Refresh
-	Registration registration.Registration
+	Auth         *authenticate.Login
+	ConfirmUser  *confirm.Confirm
+	CurrentUser  *current.Current
+	LogOut       *logout.LogOut
+	RefreshUser  *refresh.Refresh
+	Registration *registration.Registration
 }
 
 //go:generate go run github.com/vektra/mockery/v2@v2.53.5 --name=ServiceAuth
@@ -35,32 +35,32 @@ type ServiceAuth interface {
 
 func New(log *slog.Logger, storage storage.Storage, cfg *config.Config) *Service {
 	return &Service{
-		Auth: authenticate.Login{
+		Auth: &authenticate.Login{
 			Storage: storage,
 			Cfg:     cfg,
 			Log:     log,
 		},
-		ConfirmUser: confirm.Confirm{
+		ConfirmUser: &confirm.Confirm{
 			Storage: storage,
 			Cfg:     cfg,
 			Log:     log,
 		},
-		CurrentUser: current.Current{
+		CurrentUser: &current.Current{
 			Storage: storage,
 			Cfg:     cfg,
 			Log:     log,
 		},
-		LogOut: logout.LogOut{
+		LogOut: &logout.LogOut{
 			Storage: storage,
 			Cfg:     cfg,
 			Log:     log,
 		},
-		RefreshUser: refresh.Refresh{
+		RefreshUser: &refresh.Refresh{
 			Storage: storage,
 			Cfg:     cfg,
 			Log:     log,
 		},
-		Registration: registration.Registration{
+		Registration: &registration.Registration{
 			Storage: storage,
 			Cfg:     cfg,
 			Log:     log,
