@@ -11,20 +11,19 @@ import (
 	"github.com/Weit145/Auth_golang/internal/domain"
 	myjwt "github.com/Weit145/Auth_golang/internal/lib/jwt"
 	"github.com/Weit145/Auth_golang/internal/lib/logger"
-	"github.com/Weit145/Auth_golang/internal/storage"
 	"github.com/jackc/pgx/v5"
 )
 
 type Confirm struct {
-	Storage    ConfirmRepo
-	TxProvider storage.TxProvider
-	Cfg        *config.Config
-	Log        *slog.Logger
+	Storage ConfirmRepo
+	Cfg     *config.Config
+	Log     *slog.Logger
 }
 
 type ConfirmRepo interface {
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
 	ConfirmRepo(ctx context.Context, user *domain.User) error
+	WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error
 }
 
 func (s *Confirm) Confirm(ctx context.Context, token string) (accessToken, refreshToken string, err error) {
@@ -36,7 +35,7 @@ func (s *Confirm) Confirm(ctx context.Context, token string) (accessToken, refre
 		return "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	err = s.TxProvider.WithTx(ctx, func(tx pgx.Tx) error {
+	err = s.Storage.WithTx(ctx, func(tx pgx.Tx) error {
 		user, err := s.Storage.GetUserByEmail(ctx, email)
 		if err != nil {
 			return fmt.Errorf("%s: failed to get user by email within transaction: %w", op, err)

@@ -9,7 +9,6 @@ import (
 	"github.com/Weit145/Auth_golang/internal/domain"
 	myjwt "github.com/Weit145/Auth_golang/internal/lib/jwt"
 	"github.com/Weit145/Auth_golang/internal/lib/logger"
-	"github.com/Weit145/Auth_golang/internal/storage"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -22,14 +21,14 @@ type User struct {
 }
 
 type Current struct {
-	Storage    CurrentRepo
-	TxProvider storage.TxProvider
-	Log        *slog.Logger
-	Cfg        *config.Config
+	Storage CurrentRepo
+	Log     *slog.Logger
+	Cfg     *config.Config
 }
 
 type CurrentRepo interface {
 	GetUserByLogin(ctx context.Context, login string) (*domain.User, error)
+	WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error
 }
 
 func (s *Current) Current(ctx context.Context, AssetToken string) (*User, error) {
@@ -42,7 +41,7 @@ func (s *Current) Current(ctx context.Context, AssetToken string) (*User, error)
 	}
 
 	var resp User
-	err = s.TxProvider.WithTx(ctx, func(tx pgx.Tx) error {
+	err = s.Storage.WithTx(ctx, func(tx pgx.Tx) error {
 		user, err := s.Storage.GetUserByLogin(ctx, login)
 		if err != nil {
 			return fmt.Errorf("%s: failed to get user by login within transaction: %w", op, err)
